@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    
+    <title>test</title>
+    <meta name="viewport" content="width=device-width,minimum-scale=1">
+    <meta name="description" content="">
+    <meta name="generator" content="Hugo 0.88.1" />
+    
+    
+      <META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW">
+    
+
+    
+<link rel="stylesheet" href="/ananke/css/main.min.css" >
+
+
+
+
+    
+      
+
+    
+
+    
+    
+      <link href="/posts/index.xml" rel="alternate" type="application/rss+xml" title="test" />
+      <link href="/posts/index.xml" rel="feed" type="application/rss+xml" title="test" />
+      
+    
+    
+    <meta property="og:title" content="Posts" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="http://127.0.0.1:1313/posts/" />
+
+<meta itemprop="name" content="Posts">
+<meta itemprop="description" content=""><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Posts"/>
+<meta name="twitter:description" content=""/>
+
+	
+  </head>
+
+  <body class="ma0 avenir bg-near-white">
+
+    
+
+  <header>
+    <div class="pb3-m pb6-l bg-black">
+      <nav class="pv3 ph3 ph4-ns" role="navigation">
+  <div class="flex-l justify-between items-center center">
+    <a href="/" class="f3 fw2 hover-white no-underline white-90 dib">
+      
+        test
+      
+    </a>
+    <div class="flex-l items-center">
+      
+
+      
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </div>
+  </div>
+</nav>
+
+      <div class="tc-l pv3 ph3 ph4-ns">
+        <h1 class="f2 f-subheadline-l fw2 light-silver mb0 lh-title">
+          Posts
+        </h1>
+        
+      </div>
+    </div>
+  </header>
+
+
+    <main class="pb7" role="main">
+      
+  <article class="pa3 pa4-ns nested-copy-line-height nested-img">
+    <section class="cf ph3 ph5-l pv3 pv4-l f4 tc-l center measure-wide lh-copy mid-gray"></section>
+    <section class="flex-ns flex-wrap justify-around mt5">
+      
+        <div class="relative w-100 w-30-l mb4 bg-white"><div class="relative w-100 mb4 bg-white nested-copy-line-height">
+  <div class="bg-white mb3 pa4 gray overflow-hidden">
+    <span class="f6 db">Posts</span>
+    <h1 class="f3 near-black">
+      <a href="/posts/effective-go%E5%AD%A6%E4%B9%A0%E5%8F%8Agolang%E5%85%B6%E4%BB%96%E9%97%AE%E9%A2%98%E8%A1%8D%E7%94%9F/" class="link black dim">
+        
+      </a>
+    </h1>
+    <div class="nested-links f5 lh-copy nested-copy-line-height">
+      effective go学习及golang其他问题衍生 Go routine实现 Go channel 一些疑问 channel关闭两次
+ 会panic 往已经关闭的channel中写数据 panic 从已关闭的channel中读数据 无缓冲区：不会panic，读到的是channel对象的初值 有缓冲区：可以继续读取数据，直到读完，读完按照第一条处理。 可以按照类似map[key]的形式判断当前channel是否已关闭 如果不判断是否已经读完了，则会一直执行第一条。  反射 基本概念 实现三种功能（3定律）
+ 通过接口获取接口原来的对象 通过对象获取它实现的接口 修改被反射的对象（只有当传入对象的值是可设置的，才能修改）  Map hash，使用拉链法解决哈希碰撞问题，基本概念
+ 装载因子：数组中元素的数量与数组大小的比值，随着装载因子的增加，线性探测的平均用时就会逐渐增加 溢出桶：为了解决频繁扩容问题的设计，  基本数据结构  hmap：Map的数据结构，主要包含count/B/buckets/oldbuckets/extra字段 bmap：bucket的实际承载结构，一个bucket最多包含8个键值对，多的放到溢出桶里面。 extra：溢出桶，在内存空间上在bmap之后，用于减少扩容的频率  操作 扩容 触发条件：
+ 装载因子超过6.5 溢出桶使用过多：等量扩容 频繁的大量创建删除，可能最终容量还够，但是由于创建时使用了溢出桶，又没有溢出桶的回收机制的话，导致这部分溢出桶一直存在，可能引发内存泄露。 关注点：   有保护机制，由于不是原子的过程，扩容时需判断当前是不是已经处在扩容状态，避免二次扩容的混乱。 有oldbuckets和oldoverflow，在扩容过程中保存老的桶和溢出桶 扩容过程大概是  创建新的bucket，老的bucket存到obdbuckets 对老桶的数据再分配，由于老桶肯定是有拉链在了，需要把老桶的东西分到新的两个桶里面，即分流。 扩容期间，map的读写操作都是在旧桶上操作，并且触发旧桶的内容复制到新的桶内。 扩容不是在需要扩容的时候一波扩玩，而是创建了之后在有写或者删除操作的时候才执行某个的扩容，这样防止瞬间性能的抖动。    读写设计  使用hash函数和种子对key作hash hash后，用低位找到对应的桶号（这个根据当前桶数量具体看） 高8位用来作为tophash，用于与当前桶中的tophash作比较，加速查找（显然比较8位比比较key值快得多） 每个桶中最多放8个数据，多出来的放到溢出桶里  Sync包及使用 sync包提供了并发编程中相关的一些基础能力，相当于一种同步机制。提供的基本能力包括：
+ Mutex：锁 RWMutex：读写锁 WaitGroup：等待多个协程执行结束 Once：全局执行一次 Cond：condition的缩写。  WaitGroup 主要包含Add\Done\Wait，使用方法就是先Add，表示要执行多少个（初始化计数器） Done就是调Add(-1)，计数器=0时，wait返回结果。表示执行结束
+    </div>
+  </div>
+</div>
+</div>
+      
+    </section></article>
+
+    </main>
+    <footer class="bg-black bottom-0 w-100 pa3" role="contentinfo">
+  <div class="flex justify-between">
+  <a class="f4 fw4 hover-white no-underline white-70 dn dib-ns pv2 ph3" href="http://127.0.0.1:1313/" >
+    &copy;  test 2021 
+  </a>
+    <div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+  </div>
+</footer>
+
+  </body>
+</html>

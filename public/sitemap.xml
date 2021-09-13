@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>http://127.0.0.1:1313/posts/effective-go%E5%AD%A6%E4%B9%A0%E5%8F%8Agolang%E5%85%B6%E4%BB%96%E9%97%AE%E9%A2%98%E8%A1%8D%E7%94%9F/</loc>
+  </url><url>
+    <loc>http://127.0.0.1:1313/categories/</loc>
+  </url><url>
+    <loc>http://127.0.0.1:1313/posts/</loc>
+  </url><url>
+    <loc>http://127.0.0.1:1313/tags/</loc>
+  </url><url>
+    <loc>http://127.0.0.1:1313/</loc>
+  </url>
+</urlset>
