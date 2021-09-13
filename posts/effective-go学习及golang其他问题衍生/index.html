@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    
+    <title>test</title>
+    <meta name="viewport" content="width=device-width,minimum-scale=1">
+    <meta name="description" content="effective go学习及golang其他问题衍生 Go routine实现 Go channel 一些疑问 channel关闭两次
+ 会panic 往已经关闭的channel中写数据 panic 从已关闭的channel中读数据 无缓冲区：不会panic，读到的是channel对象的初值 有缓冲区：可以继续读取数据，直到读完，读完按照第一条处理。 可以按照类似map[key]的形式判断当前channel是否已关闭 如果不判断是否已经读完了，则会一直执行第一条。  反射 基本概念 实现三种功能（3定律）
+ 通过接口获取接口原来的对象 通过对象获取它实现的接口 修改被反射的对象（只有当传入对象的值是可设置的，才能修改）  Map hash，使用拉链法解决哈希碰撞问题，基本概念
+ 装载因子：数组中元素的数量与数组大小的比值，随着装载因子的增加，线性探测的平均用时就会逐渐增加 溢出桶：为了解决频繁扩容问题的设计，  基本数据结构  hmap：Map的数据结构，主要包含count/B/buckets/oldbuckets/extra字段 bmap：bucket的实际承载结构，一个bucket最多包含8个键值对，多的放到溢出桶里面。 extra：溢出桶，在内存空间上在bmap之后，用于减少扩容的频率  操作 扩容 触发条件：
+ 装载因子超过6.5 溢出桶使用过多：等量扩容 频繁的大量创建删除，可能最终容量还够，但是由于创建时使用了溢出桶，又没有溢出桶的回收机制的话，导致这部分溢出桶一直存在，可能引发内存泄露。 关注点：   有保护机制，由于不是原子的过程，扩容时需判断当前是不是已经处在扩容状态，避免二次扩容的混乱。 有oldbuckets和oldoverflow，在扩容过程中保存老的桶和溢出桶 扩容过程大概是  创建新的bucket，老的bucket存到obdbuckets 对老桶的数据再分配，由于老桶肯定是有拉链在了，需要把老桶的东西分到新的两个桶里面，即分流。 扩容期间，map的读写操作都是在旧桶上操作，并且触发旧桶的内容复制到新的桶内。 扩容不是在需要扩容的时候一波扩玩，而是创建了之后在有写或者删除操作的时候才执行某个的扩容，这样防止瞬间性能的抖动。    读写设计  使用hash函数和种子对key作hash hash后，用低位找到对应的桶号（这个根据当前桶数量具体看） 高8位用来作为tophash，用于与当前桶中的tophash作比较，加速查找（显然比较8位比比较key值快得多） 每个桶中最多放8个数据，多出来的放到溢出桶里  Sync包及使用 sync包提供了并发编程中相关的一些基础能力，相当于一种同步机制。提供的基本能力包括：
+ Mutex：锁 RWMutex：读写锁 WaitGroup：等待多个协程执行结束 Once：全局执行一次 Cond：condition的缩写。  WaitGroup 主要包含Add\Done\Wait，使用方法就是先Add，表示要执行多少个（初始化计数器） Done就是调Add(-1)，计数器=0时，wait返回结果。表示执行结束">
+    <meta name="generator" content="Hugo 0.88.1" />
+    
+    
+      <META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW">
+    
+
+    
+<link rel="stylesheet" href="/ananke/css/main.min.css" >
+
+
+
+
+    
+      
+
+    
+
+    
+    
+    <meta property="og:title" content="" />
+<meta property="og:description" content="effective go学习及golang其他问题衍生 Go routine实现 Go channel 一些疑问 channel关闭两次
+ 会panic 往已经关闭的channel中写数据 panic 从已关闭的channel中读数据 无缓冲区：不会panic，读到的是channel对象的初值 有缓冲区：可以继续读取数据，直到读完，读完按照第一条处理。 可以按照类似map[key]的形式判断当前channel是否已关闭 如果不判断是否已经读完了，则会一直执行第一条。  反射 基本概念 实现三种功能（3定律）
+ 通过接口获取接口原来的对象 通过对象获取它实现的接口 修改被反射的对象（只有当传入对象的值是可设置的，才能修改）  Map hash，使用拉链法解决哈希碰撞问题，基本概念
+ 装载因子：数组中元素的数量与数组大小的比值，随着装载因子的增加，线性探测的平均用时就会逐渐增加 溢出桶：为了解决频繁扩容问题的设计，  基本数据结构  hmap：Map的数据结构，主要包含count/B/buckets/oldbuckets/extra字段 bmap：bucket的实际承载结构，一个bucket最多包含8个键值对，多的放到溢出桶里面。 extra：溢出桶，在内存空间上在bmap之后，用于减少扩容的频率  操作 扩容 触发条件：
+ 装载因子超过6.5 溢出桶使用过多：等量扩容 频繁的大量创建删除，可能最终容量还够，但是由于创建时使用了溢出桶，又没有溢出桶的回收机制的话，导致这部分溢出桶一直存在，可能引发内存泄露。 关注点：   有保护机制，由于不是原子的过程，扩容时需判断当前是不是已经处在扩容状态，避免二次扩容的混乱。 有oldbuckets和oldoverflow，在扩容过程中保存老的桶和溢出桶 扩容过程大概是  创建新的bucket，老的bucket存到obdbuckets 对老桶的数据再分配，由于老桶肯定是有拉链在了，需要把老桶的东西分到新的两个桶里面，即分流。 扩容期间，map的读写操作都是在旧桶上操作，并且触发旧桶的内容复制到新的桶内。 扩容不是在需要扩容的时候一波扩玩，而是创建了之后在有写或者删除操作的时候才执行某个的扩容，这样防止瞬间性能的抖动。    读写设计  使用hash函数和种子对key作hash hash后，用低位找到对应的桶号（这个根据当前桶数量具体看） 高8位用来作为tophash，用于与当前桶中的tophash作比较，加速查找（显然比较8位比比较key值快得多） 每个桶中最多放8个数据，多出来的放到溢出桶里  Sync包及使用 sync包提供了并发编程中相关的一些基础能力，相当于一种同步机制。提供的基本能力包括：
+ Mutex：锁 RWMutex：读写锁 WaitGroup：等待多个协程执行结束 Once：全局执行一次 Cond：condition的缩写。  WaitGroup 主要包含Add\Done\Wait，使用方法就是先Add，表示要执行多少个（初始化计数器） Done就是调Add(-1)，计数器=0时，wait返回结果。表示执行结束" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://127.0.0.1:1313/posts/effective-go%E5%AD%A6%E4%B9%A0%E5%8F%8Agolang%E5%85%B6%E4%BB%96%E9%97%AE%E9%A2%98%E8%A1%8D%E7%94%9F/" /><meta property="article:section" content="posts" />
+
+
+
+<meta itemprop="name" content="">
+<meta itemprop="description" content="effective go学习及golang其他问题衍生 Go routine实现 Go channel 一些疑问 channel关闭两次
+ 会panic 往已经关闭的channel中写数据 panic 从已关闭的channel中读数据 无缓冲区：不会panic，读到的是channel对象的初值 有缓冲区：可以继续读取数据，直到读完，读完按照第一条处理。 可以按照类似map[key]的形式判断当前channel是否已关闭 如果不判断是否已经读完了，则会一直执行第一条。  反射 基本概念 实现三种功能（3定律）
+ 通过接口获取接口原来的对象 通过对象获取它实现的接口 修改被反射的对象（只有当传入对象的值是可设置的，才能修改）  Map hash，使用拉链法解决哈希碰撞问题，基本概念
+ 装载因子：数组中元素的数量与数组大小的比值，随着装载因子的增加，线性探测的平均用时就会逐渐增加 溢出桶：为了解决频繁扩容问题的设计，  基本数据结构  hmap：Map的数据结构，主要包含count/B/buckets/oldbuckets/extra字段 bmap：bucket的实际承载结构，一个bucket最多包含8个键值对，多的放到溢出桶里面。 extra：溢出桶，在内存空间上在bmap之后，用于减少扩容的频率  操作 扩容 触发条件：
+ 装载因子超过6.5 溢出桶使用过多：等量扩容 频繁的大量创建删除，可能最终容量还够，但是由于创建时使用了溢出桶，又没有溢出桶的回收机制的话，导致这部分溢出桶一直存在，可能引发内存泄露。 关注点：   有保护机制，由于不是原子的过程，扩容时需判断当前是不是已经处在扩容状态，避免二次扩容的混乱。 有oldbuckets和oldoverflow，在扩容过程中保存老的桶和溢出桶 扩容过程大概是  创建新的bucket，老的bucket存到obdbuckets 对老桶的数据再分配，由于老桶肯定是有拉链在了，需要把老桶的东西分到新的两个桶里面，即分流。 扩容期间，map的读写操作都是在旧桶上操作，并且触发旧桶的内容复制到新的桶内。 扩容不是在需要扩容的时候一波扩玩，而是创建了之后在有写或者删除操作的时候才执行某个的扩容，这样防止瞬间性能的抖动。    读写设计  使用hash函数和种子对key作hash hash后，用低位找到对应的桶号（这个根据当前桶数量具体看） 高8位用来作为tophash，用于与当前桶中的tophash作比较，加速查找（显然比较8位比比较key值快得多） 每个桶中最多放8个数据，多出来的放到溢出桶里  Sync包及使用 sync包提供了并发编程中相关的一些基础能力，相当于一种同步机制。提供的基本能力包括：
+ Mutex：锁 RWMutex：读写锁 WaitGroup：等待多个协程执行结束 Once：全局执行一次 Cond：condition的缩写。  WaitGroup 主要包含Add\Done\Wait，使用方法就是先Add，表示要执行多少个（初始化计数器） Done就是调Add(-1)，计数器=0时，wait返回结果。表示执行结束">
+
+<meta itemprop="wordCount" content="93">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content=""/>
+<meta name="twitter:description" content="effective go学习及golang其他问题衍生 Go routine实现 Go channel 一些疑问 channel关闭两次
+ 会panic 往已经关闭的channel中写数据 panic 从已关闭的channel中读数据 无缓冲区：不会panic，读到的是channel对象的初值 有缓冲区：可以继续读取数据，直到读完，读完按照第一条处理。 可以按照类似map[key]的形式判断当前channel是否已关闭 如果不判断是否已经读完了，则会一直执行第一条。  反射 基本概念 实现三种功能（3定律）
+ 通过接口获取接口原来的对象 通过对象获取它实现的接口 修改被反射的对象（只有当传入对象的值是可设置的，才能修改）  Map hash，使用拉链法解决哈希碰撞问题，基本概念
+ 装载因子：数组中元素的数量与数组大小的比值，随着装载因子的增加，线性探测的平均用时就会逐渐增加 溢出桶：为了解决频繁扩容问题的设计，  基本数据结构  hmap：Map的数据结构，主要包含count/B/buckets/oldbuckets/extra字段 bmap：bucket的实际承载结构，一个bucket最多包含8个键值对，多的放到溢出桶里面。 extra：溢出桶，在内存空间上在bmap之后，用于减少扩容的频率  操作 扩容 触发条件：
+ 装载因子超过6.5 溢出桶使用过多：等量扩容 频繁的大量创建删除，可能最终容量还够，但是由于创建时使用了溢出桶，又没有溢出桶的回收机制的话，导致这部分溢出桶一直存在，可能引发内存泄露。 关注点：   有保护机制，由于不是原子的过程，扩容时需判断当前是不是已经处在扩容状态，避免二次扩容的混乱。 有oldbuckets和oldoverflow，在扩容过程中保存老的桶和溢出桶 扩容过程大概是  创建新的bucket，老的bucket存到obdbuckets 对老桶的数据再分配，由于老桶肯定是有拉链在了，需要把老桶的东西分到新的两个桶里面，即分流。 扩容期间，map的读写操作都是在旧桶上操作，并且触发旧桶的内容复制到新的桶内。 扩容不是在需要扩容的时候一波扩玩，而是创建了之后在有写或者删除操作的时候才执行某个的扩容，这样防止瞬间性能的抖动。    读写设计  使用hash函数和种子对key作hash hash后，用低位找到对应的桶号（这个根据当前桶数量具体看） 高8位用来作为tophash，用于与当前桶中的tophash作比较，加速查找（显然比较8位比比较key值快得多） 每个桶中最多放8个数据，多出来的放到溢出桶里  Sync包及使用 sync包提供了并发编程中相关的一些基础能力，相当于一种同步机制。提供的基本能力包括：
+ Mutex：锁 RWMutex：读写锁 WaitGroup：等待多个协程执行结束 Once：全局执行一次 Cond：condition的缩写。  WaitGroup 主要包含Add\Done\Wait，使用方法就是先Add，表示要执行多少个（初始化计数器） Done就是调Add(-1)，计数器=0时，wait返回结果。表示执行结束"/>
+
+	
+  </head>
+
+  <body class="ma0 avenir bg-near-white">
+
+    
+   
+  
+
+  <header>
+    <div class="bg-black">
+      <nav class="pv3 ph3 ph4-ns" role="navigation">
+  <div class="flex-l justify-between items-center center">
+    <a href="/" class="f3 fw2 hover-white no-underline white-90 dib">
+      
+        test
+      
+    </a>
+    <div class="flex-l items-center">
+      
+
+      
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </div>
+  </div>
+</nav>
+
+    </div>
+  </header>
+
+
+
+    <main class="pb7" role="main">
+      
+  
+  <article class="flex-l flex-wrap justify-between mw8 center ph3">
+    <header class="mt4 w-100">
+      <aside class="instapaper_ignoref b helvetica tracked">
+          
+        POSTS
+      </aside>
+      
+
+
+
+
+  <div id="sharing" class="mt3">
+
+    
+    <a href="https://www.facebook.com/sharer.php?u=http://127.0.0.1:1313/posts/effective-go%E5%AD%A6%E4%B9%A0%E5%8F%8Agolang%E5%85%B6%E4%BB%96%E9%97%AE%E9%A2%98%E8%A1%8D%E7%94%9F/" class="facebook no-underline" aria-label="share on Facebook">
+      <svg height="32px"  style="enable-background:new 0 0 67 67;" version="1.1" viewBox="0 0 67 67" width="32px" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M28.765,50.32h6.744V33.998h4.499l0.596-5.624h-5.095  l0.007-2.816c0-1.466,0.14-2.253,2.244-2.253h2.812V17.68h-4.5c-5.405,0-7.307,2.729-7.307,7.317v3.377h-3.369v5.625h3.369V50.32z   M33,64C16.432,64,3,50.569,3,34S16.432,4,33,4s30,13.431,30,30S49.568,64,33,64z" style="fill-rule:evenodd;clip-rule:evenodd;"/></svg>
+
+    </a>
+
+    
+    
+    <a href="https://twitter.com/share?url=http://127.0.0.1:1313/posts/effective-go%E5%AD%A6%E4%B9%A0%E5%8F%8Agolang%E5%85%B6%E4%BB%96%E9%97%AE%E9%A2%98%E8%A1%8D%E7%94%9F/&amp;text=" class="twitter no-underline" aria-label="share on Twitter">
+      <svg height="32px"  style="enable-background:new 0 0 67 67;" version="1.1" viewBox="0 0 67 67" width="32px" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M37.167,22.283c-2.619,0.953-4.274,3.411-4.086,6.101  l0.063,1.038l-1.048-0.127c-3.813-0.487-7.145-2.139-9.974-4.915l-1.383-1.377l-0.356,1.017c-0.754,2.267-0.272,4.661,1.299,6.271  c0.838,0.89,0.649,1.017-0.796,0.487c-0.503-0.169-0.943-0.296-0.985-0.233c-0.146,0.149,0.356,2.076,0.754,2.839  c0.545,1.06,1.655,2.097,2.871,2.712l1.027,0.487l-1.215,0.021c-1.173,0-1.215,0.021-1.089,0.467  c0.419,1.377,2.074,2.839,3.918,3.475l1.299,0.444l-1.131,0.678c-1.676,0.976-3.646,1.526-5.616,1.568  C19.775,43.256,19,43.341,19,43.405c0,0.211,2.557,1.397,4.044,1.864c4.463,1.377,9.765,0.783,13.746-1.568  c2.829-1.673,5.657-5,6.978-8.221c0.713-1.716,1.425-4.851,1.425-6.354c0-0.975,0.063-1.102,1.236-2.267  c0.692-0.678,1.341-1.419,1.467-1.631c0.21-0.403,0.188-0.403-0.88-0.043c-1.781,0.636-2.033,0.551-1.152-0.402  c0.649-0.678,1.425-1.907,1.425-2.267c0-0.063-0.314,0.042-0.671,0.233c-0.377,0.212-1.215,0.53-1.844,0.72l-1.131,0.361l-1.027-0.7  c-0.566-0.381-1.361-0.805-1.781-0.932C39.766,21.902,38.131,21.944,37.167,22.283z M33,64C16.432,64,3,50.569,3,34S16.432,4,33,4  s30,13.431,30,30S49.568,64,33,64z" style="fill-rule:evenodd;clip-rule:evenodd;fill:;"/></svg>
+
+    </a>
+
+    
+    <a href="https://www.linkedin.com/shareArticle?mini=true&amp;url=http://127.0.0.1:1313/posts/effective-go%E5%AD%A6%E4%B9%A0%E5%8F%8Agolang%E5%85%B6%E4%BB%96%E9%97%AE%E9%A2%98%E8%A1%8D%E7%94%9F/&amp;title=" class="linkedin no-underline" aria-label="share on LinkedIn">
+      <svg  height="32px"  style="enable-background:new 0 0 65 65;" version="1.1" viewBox="0 0 65 65" width="32px" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <path d="M50.837,48.137V36.425c0-6.275-3.35-9.195-7.816-9.195  c-3.604,0-5.219,1.983-6.119,3.374V27.71h-6.79c0.09,1.917,0,20.427,0,20.427h6.79V36.729c0-0.609,0.044-1.219,0.224-1.655  c0.49-1.22,1.607-2.483,3.482-2.483c2.458,0,3.44,1.873,3.44,4.618v10.929H50.837z M22.959,24.922c2.367,0,3.842-1.57,3.842-3.531  c-0.044-2.003-1.475-3.528-3.797-3.528s-3.841,1.524-3.841,3.528c0,1.961,1.474,3.531,3.753,3.531H22.959z M34,64  C17.432,64,4,50.568,4,34C4,17.431,17.432,4,34,4s30,13.431,30,30C64,50.568,50.568,64,34,64z M26.354,48.137V27.71h-6.789v20.427  H26.354z" style="fill-rule:evenodd;clip-rule:evenodd;fill:;"/>
+</svg>
+
+    </a>
+  </div>
+
+
+      <h1 class="f1 athelas mt3 mb1"></h1>
+      
+      
+      <time class="f6 mv4 dib tracked" datetime="0001-01-01T00:00:00Z">January 1, 0001</time>
+
+      
+      
+    </header>
+    <div class="nested-copy-line-height lh-copy serif f4 nested-links nested-img mid-gray pr4-l w-two-thirds-l"><h2 id="effective-go学习及golang其他问题衍生">effective go学习及golang其他问题衍生</h2>
+<h3 id="go-routine实现">Go routine实现</h3>
+<h3 id="go-channel">Go channel</h3>
+<h5 id="一些疑问">一些疑问</h5>
+<p>channel关闭两次</p>
+<ul>
+<li>会panic
+往已经关闭的channel中写数据</li>
+<li>panic
+从已关闭的channel中读数据</li>
+<li>无缓冲区：不会panic，读到的是channel对象的初值</li>
+<li>有缓冲区：可以继续读取数据，直到读完，读完按照第一条处理。</li>
+<li>可以按照类似map[key]的形式判断当前channel是否已关闭</li>
+<li>如果不判断是否已经读完了，则会一直执行第一条。</li>
+</ul>
+<h3 id="反射">反射</h3>
+<h5 id="基本概念">基本概念</h5>
+<p>实现三种功能（3定律）</p>
+<ol>
+<li>通过接口获取接口原来的对象</li>
+<li>通过对象获取它实现的接口</li>
+<li>修改被反射的对象（只有当传入对象的值是可设置的，才能修改）</li>
+</ol>
+<h2 id="map">Map</h2>
+<p>hash，使用拉链法解决哈希碰撞问题，基本概念</p>
+<ul>
+<li><strong>装载因子</strong>：数组中元素的数量与数组大小的比值，随着装载因子的增加，线性探测的平均用时就会逐渐增加</li>
+<li><strong>溢出桶</strong>：为了解决频繁扩容问题的设计，</li>
+</ul>
+<h4 id="基本数据结构">基本数据结构</h4>
+<ul>
+<li>hmap：Map的数据结构，主要包含count/B/buckets/oldbuckets/extra字段</li>
+<li>bmap：bucket的实际承载结构，一个bucket最多包含8个键值对，多的放到溢出桶里面。</li>
+<li>extra：溢出桶，在内存空间上在bmap之后，用于减少扩容的频率</li>
+</ul>
+<h4 id="操作">操作</h4>
+<h5 id="扩容">扩容</h5>
+<p>触发条件：</p>
+<ul>
+<li>装载因子超过6.5</li>
+<li>溢出桶使用过多：等量扩容
+频繁的大量创建删除，可能最终容量还够，但是由于创建时使用了溢出桶，又没有溢出桶的回收机制的话，导致这部分溢出桶一直存在，可能引发内存泄露。
+关注点：</li>
+</ul>
+<ol>
+<li>有保护机制，由于不是原子的过程，扩容时需判断当前是不是已经处在扩容状态，避免二次扩容的混乱。</li>
+<li>有oldbuckets和oldoverflow，在扩容过程中保存老的桶和溢出桶</li>
+<li>扩容过程大概是
+<ol>
+<li>创建新的bucket，老的bucket存到obdbuckets</li>
+<li>对老桶的数据再分配，由于老桶肯定是有拉链在了，需要把老桶的东西分到新的两个桶里面，即分流。</li>
+<li>扩容期间，map的读写操作都是在旧桶上操作，并且触发旧桶的内容复制到新的桶内。</li>
+<li>扩容不是在需要扩容的时候一波扩玩，而是创建了之后在有写或者删除操作的时候才执行某个的扩容，这样防止瞬间性能的抖动。</li>
+</ol>
+</li>
+</ol>
+<h5 id="读写设计">读写设计</h5>
+<ul>
+<li>使用hash函数和种子对key作hash</li>
+<li>hash后，用低位找到对应的桶号（这个根据当前桶数量具体看）</li>
+<li>高8位用来作为tophash，用于与当前桶中的tophash作比较，加速查找（显然比较8位比比较key值快得多）</li>
+<li>每个桶中最多放8个数据，多出来的放到溢出桶里</li>
+</ul>
+<h2 id="sync包及使用">Sync包及使用</h2>
+<p><code>sync</code>包提供了并发编程中相关的一些基础能力，相当于一种同步机制。提供的基本能力包括：</p>
+<ul>
+<li>Mutex：锁</li>
+<li>RWMutex：读写锁</li>
+<li>WaitGroup：等待多个协程执行结束</li>
+<li>Once：全局执行一次</li>
+<li>Cond：condition的缩写。</li>
+</ul>
+<h4 id="waitgroup">WaitGroup</h4>
+<p>主要包含<code>Add\Done\Wait</code>，使用方法就是先<code>Add</code>，表示要执行多少个（初始化计数器）
+<code>Done</code>就是调<code>Add(-1)</code>，计数器=0时，wait返回结果。表示执行结束</p>
+<h4 id="mutex">Mutex</h4>
+<p>Mutex即golang中的lock，是<code>Sync</code>包中最基本的部分，也是比较复杂的部分，主要就是实现了一个锁。而读写锁、Cond、Once，都是基于它实现的。</p>
+<h5 id="几个概念">几个概念</h5>
+<ul>
+<li><strong>饥饿状态</strong>：golang锁中有饥饿状态的概念，表示有协成等待了1ms以上。
+<ul>
+<li>本质上是为了解决自旋可能带来的协成饿死的问题</li>
+</ul>
+</li>
+<li><strong>自旋</strong>：想要拿锁，发现锁位已经置1的情况下，就cpu空跑一小段时间（<strong>30次pause</strong>），再尝试拿锁；这里相当于sleep了一小会儿，但是它没有协成切换，没有转入阻塞；也就不会有协成切换的开销。
+<ul>
+<li>因为自旋其实比较占cpu，所以进入自旋条件也比较苛刻，golang中自旋条件：
+<ul>
+<li>cpu数大于1</li>
+<li>等待调度队列为空</li>
+<li>调度机制允许多个process（GPM机制）</li>
+<li>自旋次数最多4次，超过就进入阻塞状态</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h5 id="锁的状态标记">锁的状态标记</h5>
+<ul>
+<li><strong>lock:</strong> 32，锁定状态标记</li>
+<li>**Woken：**31，唤醒中？</li>
+<li><strong>Starving：</strong> 30，饥饿状态</li>
+<li>**waitersCount：**0-29，等待队列数</li>
+</ul>
+<h5 id="lock和unlock">lock和unlock</h5>
+<p>lock&amp;自旋</p>
+<ol>
+<li>判断当前能否进入自旋，即lock&amp;！starving</li>
+<li>进入自旋，等待释放</li>
+<li>计算锁的新的状态</li>
+<li>更新锁状态并获取锁
+lock&amp;非自旋</li>
+<li>进入队列，等待</li>
+<li>锁释放后，唤醒一个等待的协成</li>
+</ol>
+<h5 id="自旋进入和退出">自旋进入和退出</h5>
+<ul>
+<li>如果goroutine等待时间超过1ms，切换饥饿模式</li>
+<li>如果到队列中最后一个goroutine，或者当前goroutine等待时间小于1ms，从饥饿模式退出</li>
+</ul>
+<h4 id="参考">参考</h4>
+<p><a href="https://draveness.me/golang/docs/part3-runtime/ch06-concurrency/golang-sync-primitives/#mutex">同步原语与锁</a>
+<a href="https://my.oschina.net/renhc/blog/2876211">golang互斥锁实现剖析</a>
+<a href="https://juejin.im/post/6844904024748064781">图解golang读写锁</a></p>
+<ul class="pa0">
+  
+</ul>
+<div class="mt6 instapaper_ignoref">
+      
+      
+      </div>
+    </div>
+
+    <aside class="w-30-l mt6-l">
+
+
+
+
+</aside>
+
+  </article>
+
+    </main>
+    <footer class="bg-black bottom-0 w-100 pa3" role="contentinfo">
+  <div class="flex justify-between">
+  <a class="f4 fw4 hover-white no-underline white-70 dn dib-ns pv2 ph3" href="http://127.0.0.1:1313/" >
+    &copy;  test 2021 
+  </a>
+    <div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+  </div>
+</footer>
+
+  </body>
+</html>
