@@ -1,6 +1,7 @@
 backend:
   name: github
   branch: master
+  repo: Lion-Wei/Lion-Wei.github.io
 media_folder: static/img
 public_folder: /img
 collections:
