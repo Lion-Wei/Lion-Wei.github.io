@@ -1,3 +1,8 @@
+---
+title: effective go学习及golang其他问题衍生
+date: 2021-09-15T16:02:42.765Z
+description: effective go学习笔记
+---
 ## effective go学习及golang其他问题衍生
 ### Go routine实现
 ### Go channel
