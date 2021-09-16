@@ -21,6 +21,7 @@ jobs:
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v2.5.1
         env:
+          ACTIONS_DEPLOY_KEY: ${{ secrets.ACTIONS_DEPLOY_KEY }}
           EXTERNAL_REPOSITORY: Lion-Wei/Lion-Wei.github.io
           PUBLISH_BRANCH: master
           PUBLISH_DIR: ./public
